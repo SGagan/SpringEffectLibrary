@@ -18,7 +18,13 @@ public class SpringEffectListView extends ListView implements AbsListView.OnScro
     private int finalTopHeight;
     private int finalBottomHeight;
     private final static float OFFSET_RADIO = 1.8f;
+    // total list items
     private int mTotalItemCount;
+    private int mScrollBack;
+    private final static int SCROLLBACK_HEADER = 0;
+    private final static int SCROLLBACK_FOOTER = 1;
+    private final static int SCROLL_DURATION = 400; // scroll back duration
+    private OnScrollListener mScrollListener; // user's scroll listener
 
     public SpringEffectListView(Context context) {
         super(context);
@@ -33,16 +39,6 @@ public class SpringEffectListView extends ListView implements AbsListView.OnScro
     public SpringEffectListView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         initWithContext(context);
-    }
-
-    @Override
-    public void onScrollStateChanged(AbsListView view, int scrollState) {
-     //Todo
-    }
-
-    @Override
-    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-     //Todo
     }
 
     private void initWithContext(Context context) {
@@ -103,6 +99,9 @@ public class SpringEffectListView extends ListView implements AbsListView.OnScro
         return super.onTouchEvent(ev);
     }
 
+    /**
+     * Setters
+     */
     // Set the top height
     private void setHeaderHeight(int height) {
         LayoutParams layoutParams = (LayoutParams) mHeaderView.getLayoutParams();
@@ -118,6 +117,10 @@ public class SpringEffectListView extends ListView implements AbsListView.OnScro
         mFooterView.setLayoutParams(layoutParams);
     }
 
+    /**
+     * Getters
+     */
+
     // Get the top height
     public int getHeaderHeight() {
         AbsListView.LayoutParams layoutParams =
@@ -132,6 +135,9 @@ public class SpringEffectListView extends ListView implements AbsListView.OnScro
         return layoutParams.height;
     }
 
+    /**
+     * Update
+     */
     private void updateHeaderHeight(float delta) {
         setHeaderHeight((int) (getHeaderHeight()+delta));
     }
@@ -140,11 +146,100 @@ public class SpringEffectListView extends ListView implements AbsListView.OnScro
         setFooterViewHeight((int) (getFooterHeight()+delta));
     }
 
+    /**
+     * Reset
+     */
     private void resetHeaderHeight() {
-        //Todo
+        int height = getHeaderHeight();
+        if (height == 0) // not visible.
+            return;
+        mScrollBack = SCROLLBACK_HEADER;
+        mScroller.startScroll(0, height, 0, finalTopHeight - height,
+                SCROLL_DURATION);
+        invalidate();
     }
 
     private void resetFooterHeight() {
-       //Todo
+        int bottomHeight = getFooterHeight();
+        if (bottomHeight > finalBottomHeight) {
+            mScrollBack = SCROLLBACK_FOOTER;
+            mScroller.startScroll(0, bottomHeight, 0, -bottomHeight+finalBottomHeight,
+                    SCROLL_DURATION);
+            invalidate();
+        }
     }
+
+    // Calculate the slide when the invalidate() is called, the system will automatically call
+    @Override
+    public void computeScroll() {
+        if (mScroller.computeScrollOffset()) {
+            if (mScrollBack == SCROLLBACK_HEADER) {
+                setHeaderHeight(mScroller.getCurrY());
+            } else {
+                setFooterViewHeight(mScroller.getCurrY());
+            }
+            postInvalidate();
+        }
+        super.computeScroll();
+    }
+
+    @Override
+    public void addHeaderView(View v) {
+        mHeaderView = v;
+        super.addHeaderView(mHeaderView);
+        mHeaderView.getViewTreeObserver().addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        if(finalTopHeight==0) {
+                            finalTopHeight = mHeaderView.getMeasuredHeight();
+                        }
+                        setHeaderHeight(finalTopHeight);
+                        getViewTreeObserver()
+                                .removeOnGlobalLayoutListener(this);
+                    }
+                });
+    }
+
+    @Override
+    public void addFooterView(View v) {
+        mFooterView = v;
+        super.addFooterView(mFooterView);
+
+        mFooterView.getViewTreeObserver().addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        if(finalBottomHeight==0) {
+                            finalBottomHeight = mFooterView.getMeasuredHeight();
+                        }
+                        setFooterViewHeight(finalBottomHeight);
+                        getViewTreeObserver()
+                                .removeOnGlobalLayoutListener(this);
+                    }
+                });
+    }
+
+    @Override
+    public void setOnScrollListener(OnScrollListener l) {
+        mScrollListener = l;
+    }
+
+    @Override
+    public void onScrollStateChanged(AbsListView view, int scrollState) {
+        if (mScrollListener != null) {
+            mScrollListener.onScrollStateChanged(view, scrollState);
+        }
+    }
+
+    @Override
+    public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+        // send to user's listener
+        mTotalItemCount = totalItemCount;
+        if (mScrollListener != null) {
+            mScrollListener.onScroll(view, firstVisibleItem, visibleItemCount,
+                    totalItemCount);
+        }
+    }
+
 }
