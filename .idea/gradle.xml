@@ -8,8 +8,8 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/SpringEffectLibrary" />
             <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/springeffectlibrary" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
